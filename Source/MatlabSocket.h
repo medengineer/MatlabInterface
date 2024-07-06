@@ -32,7 +32,7 @@ public:
 	/** Read incoming data */
 	int readData();
 
-	int selectedChannel;
+	Array<int> selectedChannels;
 
 	ScopedPointer<StreamingSocket> connection;
 

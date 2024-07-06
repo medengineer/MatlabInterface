@@ -42,10 +42,10 @@ public:
 	AudioProcessorEditor* createEditor() override;
 
 	/** Set currently selected channel */
-	void setSelectedChannel(int channel);
+	void setSelectedChannels(Array<int> channels);
 
 	/** Get currently selected channel */
-	int getSelectedChannel() { return selectedChannel; };
+	Array<int> getSelectedChannels() { return selectedChannels; };
 
 	/** Check for Matlab instance at specified address/port */
 	bool connect();
@@ -65,7 +65,7 @@ private:
 
 	bool connected;
 
-	int selectedChannel;
+	Array<int> selectedChannels;
 
 	std::unique_ptr<DataQueue> dataQueue;
 

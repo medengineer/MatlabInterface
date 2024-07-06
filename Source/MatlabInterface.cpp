@@ -5,13 +5,13 @@ MatlabInterface::MatlabInterface()
 	dataQueue(std::make_unique<DataQueue>(WRITE_BLOCK_LENGTH, DATA_BUFFER_NBLOCKS)),
 	socketThread(std::make_unique<SocketThread>()),
 	connected(false),
-	selectedChannel(0)
+	selectedChannels({0,1}) //TODO: Make general
 {
 	setProcessorType(Plugin::Processor::FILTER);
 
 	addStringParameter(Parameter::PROCESSOR_SCOPE, "host_address", "Host address", "Set host address", "127.0.0.1", true);
     addStringParameter(Parameter::PROCESSOR_SCOPE, "port_number", "Port number", "Set port number", "1234", true);
-	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channel", "Channel", "The continuous channel to analyze", 1);
+	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channel", "Channel", "The continuous channel to analyze", 2);
 
 }
 
@@ -45,10 +45,10 @@ bool MatlabInterface::connect()
 	return connected;
 }
 
-void MatlabInterface::setSelectedChannel(int channel)
+void MatlabInterface::setSelectedChannels(Array<int> channels)
 {
-	selectedChannel = channel;
-	socketThread->setSelectedChannel(channel);
+	selectedChannels = channels;
+	socketThread->setSelectedChannels(selectedChannels);
 }
 
 AudioProcessorEditor* MatlabInterface::createEditor()
@@ -65,9 +65,14 @@ void MatlabInterface::parameterValueChanged(Parameter* param)
 
 		if (array->size() > 0)
 		{
-			int localIndex = int(array->getFirst());
-			int globalIndex = getDataStream(param->getStreamId())->getContinuousChannels()[localIndex]->getGlobalIndex();
-			setSelectedChannel(globalIndex);
+			Array<int> global_channels;
+			for (int i = 0; i < array->size(); i++)
+			{
+				int localIndex = int(array->getReference(i));
+				int globalIndex = getDataStream(param->getStreamId())->getContinuousChannels()[localIndex]->getGlobalIndex();
+				global_channels.add(globalIndex);
+			}
+			setSelectedChannels(global_channels);
 		}
 	}
 }
@@ -85,7 +90,7 @@ void MatlabInterface::process(AudioSampleBuffer& buffer)
 		dataQueue->setChannels(nChannels);
 		socketThread->setQueuePointers(dataQueue.get());
 		socketThread->setFirstBlockFlag(true);
-		socketThread->setSelectedChannel(selectedChannel);
+		socketThread->setSelectedChannels(selectedChannels);
 		socketThread->startThread();
 	}
 

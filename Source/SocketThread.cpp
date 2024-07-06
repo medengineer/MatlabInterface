@@ -42,9 +42,9 @@ void SocketThread::setQueuePointers(DataQueue* data)
 	m_dataQueue = data;
 }
 
-void SocketThread::setSelectedChannel(int channel)
+void SocketThread::setSelectedChannels(Array<int> channels)
 {
-	socket->selectedChannel = channel;
+	socket->selectedChannels = channels;
 }
 
 int SocketThread::openSocket(int port, String host)

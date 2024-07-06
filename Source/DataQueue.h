@@ -59,7 +59,7 @@ private:
 	int lastIdx;
 	int sample_rate;
 
-	OwnedArray<AbstractFifo> m_fifos;
+	std::vector<std::unique_ptr<AbstractFifo>> m_fifos;
 	AudioSampleBuffer m_buffer;
 	Array<int> m_readSamples;
 	OwnedArray<Array<int64>> m_timestamps;

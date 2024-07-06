@@ -80,13 +80,13 @@ int MatlabSocket::writeData(int channel, const float* buffer, int size, int idx)
 		bufferSize = size;
 	}
 
-	if (channel == selectedChannel) //TODO: Strean as many channels as possible
+	//check if channel in selectedChannels
+	if (selectedChannels.size() > 0 && selectedChannels.indexOf(channel) >= 0)
 	{
-		
 		for (int i = 0; i < size; i++)
 		{
 			snprintf(writeBuffer, sizeof(writeBuffer), "%f", *(buffer+i));
-			socket->write(writeBuffer, strlen(writeBuffer));
+			socket->write(writeBuffer, int(strlen(writeBuffer)));
 			socket->write(" ",strlen(" "));
 		}
 		socket->write("\n", strlen("\n"));

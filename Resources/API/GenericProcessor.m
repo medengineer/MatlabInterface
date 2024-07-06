@@ -33,7 +33,7 @@ classdef GenericProcessor < handle
 			self.dataIn.numSamplesFetched = length(self.dataIn.continuous);
             lastFetch = self.dataIn.numSamplesFetched/toc(self.timer);
             self.dataRate = (lastFetch + self.packetsFetched * self.dataRate ) / (self.packetsFetched + 1);
-            fprintf("Data rate: %1.2f\n", self.dataRate);
+            %fprintf("Data rate: %1.2f\n", self.dataRate);
             self.timer = tic;
 		end
 

@@ -15,6 +15,10 @@ classdef Plotter < GenericProcessor
         yAxisRange;
     end
 
+	properties (Access = private)
+		loop_count;
+	end
+
     methods 
 
     	function self = Plotter(host, port)
@@ -37,7 +41,7 @@ classdef Plotter < GenericProcessor
 			xlabel(xLabel); ylabel(yLabel);
 			xlim(self.xAxisRange); ylim(self.yAxisRange);
 
-
+			self.loop_count = 0;
 			self.process();
 
 		end
@@ -56,20 +60,25 @@ classdef Plotter < GenericProcessor
 				process@GenericProcessor(self); 
 
 				numSamples = self.dataIn.numSamplesFetched;
+                
+				%fprintf('Num samples fetched: %d\n', numSamples);
 
 				if lastSample + numSamples > xAxisSize
 					xData = (lastSample+1):xAxisSize;
-					yData = self.dataIn.continuous(1:(xAxisSize-lastSample));
+					yData = self.dataIn.continuous(1:(xAxisSize-lastSample)) + mod(self.loop_count, 2)*1000;
 				else
 					xData = (lastSample+1):(lastSample+numSamples);
-					yData = self.dataIn.continuous;
+					yData = self.dataIn.continuous + mod(self.loop_count, 2)*1000;
 				end
 
 				self.hPlot = plot(xData,yData); drawnow;
 				set(self.hPlot, 'XData', xData, 'YData', yData); 
 
+				self.loop_count = self.loop_count + 1;
+
+				lastSample = lastSample + mod(self.loop_count, 2)*numSamples;
+
 				%TODO: Currently ignores (doesn't plot) samples that overshoot x-axis range
-				lastSample = lastSample + numSamples;
                 if lastSample > xAxisSize
                     lastSample = 0;
                     cla; self.hPlot = plot(0,0); drawnow; 

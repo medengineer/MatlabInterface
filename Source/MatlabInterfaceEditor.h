@@ -45,7 +45,7 @@ public:
 	~ConnectionViewer();
 
 	/** Respond to button clicks*/
-	void buttonClicked(Button*);
+	void buttonClicked(Button*) override;
 
 	int buttonSize;
 	int width;

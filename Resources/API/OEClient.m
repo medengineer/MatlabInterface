@@ -18,6 +18,7 @@ classdef OEClient < handle
         stream_writer;
         stream_reader;
         buffered_reader;
+        total_lines_read;
     end
 
     properties (Constant)
@@ -44,19 +45,26 @@ classdef OEClient < handle
             if ~self.connected 
                 fprintf("Failed to connect to Open Ephys!\n");
             end
+
+            self.total_lines_read = 0;
             
         end
 
         function line = read(self)
 
             line = self.buffered_reader.readLine;
+            self.total_lines_read = self.total_lines_read + 1;
+
+            if mod(self.total_lines_read, 10) == 0
+                %fprintf("Read %d lines...\n", self.total_lines_read);
+            end
 
         end
 
         function self = write(self, message)
             
-            fprintf("Size of msg: %d\n", length(message));
-            fprintf("Message: %s\n", message);
+            %fprintf("Size of msg: %d\n", length(message));
+            %fprintf("Message: %s\n", message);
    
             if (length(message)/2 == self.WRITE_MSG_SIZE_IN_BYTES)
                 self.stream_writer.writeBytes(message);
@@ -91,6 +99,7 @@ classdef OEClient < handle
                 fprintf("Created buffered reader...\n");
             catch 
                 fprintf("Connecting...\n");
+                pause(1);
             end
            
         end

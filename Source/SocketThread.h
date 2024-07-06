@@ -46,7 +46,7 @@ public:
 	~SocketThread();
 
 	void setQueuePointers(DataQueue* data);
-	void setSelectedChannel(int channel);
+	void setSelectedChannels(Array<int> channels);
 
 	int openSocket(int port, String host); 
 

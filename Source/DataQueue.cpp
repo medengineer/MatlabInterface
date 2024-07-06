@@ -33,7 +33,9 @@ DataQueue::DataQueue(int blockSize, int nBlocks) :
 {}
 
 DataQueue::~DataQueue()
-{}
+{
+}
+
 
 void DataQueue::setChannels(int nChans)
 {
@@ -48,7 +50,7 @@ void DataQueue::setChannels(int nChans)
 
 	for (int i = 0; i < nChans; ++i)
 	{
-		m_fifos.add(new AbstractFifo(m_maxSize));
+		m_fifos.push_back(std::make_unique<AbstractFifo>(m_maxSize));
 		m_readSamples.add(0);
 		m_timestamps.add(new Array<int64>());
 		m_timestamps.getLast()->resize(m_numBlocks);
