@@ -1,6 +1,10 @@
 #include "MatlabSocket.h"
 #include "../../Source/CoreServices.h"
 
+#include <sstream>
+#include <vector>
+#include <algorithm>
+
 MatlabSocket::MatlabSocket() : port(1234)
 {
 	bufferSize = WRITE_BUFFER_SIZE;
@@ -72,33 +76,42 @@ int MatlabSocket::writeHeader()
 
 int MatlabSocket::writeData(int channel, const float* buffer, int size, int idx)
 {
+    // Check for channel presence in selectedChannels
+    if (!selectedChannels.contains(channel))
+        return 0;
 
-	if (size > bufferSize)
-	{
-		LOGD("Write buffer overrun, resizing from: ", bufferSize, " to: ", size);
-		//TODO: Resize internal buffer?
-		bufferSize = size;
-	}
+    // Resize buffer if necessary
+    if (size > bufferSize)
+    {
+        LOGD("Write buffer overrun, resizing from: ", bufferSize, " to: ", size);
+        bufferSize = size;
+    }
 
-	//check if channel in selectedChannels
-	if (selectedChannels.size() > 0 && selectedChannels.indexOf(channel) >= 0)
-	{
-		for (int i = 0; i < size; i++)
-		{
-			snprintf(writeBuffer, sizeof(writeBuffer), "%f", *(buffer+i));
-			socket->write(writeBuffer, int(strlen(writeBuffer)));
-			socket->write(" ",strlen(" "));
-		}
-		socket->write("\n", strlen("\n"));
+    // Prepare the data in a single string using a string stream for efficiency
+    std::ostringstream oss;
+    std::copy(buffer, buffer + size, std::ostream_iterator<float>(oss, " "));
 
-		bool blockUntilSpecifiedAmountHasArrived = false;
-		//std::cout << "Waiting to receive data..." << std::endl; fflush(stdout);
-		socket->read(readBuffer, READ_BUFFER_SIZE, blockUntilSpecifiedAmountHasArrived);
+    // Write the whole line at once, reducing the number of socket calls
+    std::string dataLine = oss.str() + "\n";
+    int bytesWritten = socket->write(dataLine.c_str(), dataLine.size());
+    if (bytesWritten < 0)
+    {
+        // Handle error
+        std::cerr << "Failed to write data to socket" << std::endl;
+        return -1; // or throw an exception
+    }
 
-	}
+    // Optionally, read response from server if necessary
+    bool blockUntilSpecifiedAmountHasArrived = false;
+    int bytesRead = socket->read(readBuffer, READ_BUFFER_SIZE, blockUntilSpecifiedAmountHasArrived);
+    if (bytesRead < 0)
+    {
+        // Handle error
+        std::cerr << "Failed to read data from socket" << std::endl;
+        return -1; // or throw an exception
+    }
 
-	return 1;
-
+    return 1; // Success
 }
 
 int MatlabSocket::readData()

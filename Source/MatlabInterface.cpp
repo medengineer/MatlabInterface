@@ -11,7 +11,7 @@ MatlabInterface::MatlabInterface()
 
 	addStringParameter(Parameter::PROCESSOR_SCOPE, "host_address", "Host address", "Set host address", "127.0.0.1", true);
     addStringParameter(Parameter::PROCESSOR_SCOPE, "port_number", "Port number", "Set port number", "1234", true);
-	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channel", "Channel", "The continuous channel to analyze", 2);
+	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channel", "Channel", "The continuous channel to analyze", 16);
 
 }
 

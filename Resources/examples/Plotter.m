@@ -16,7 +16,7 @@ classdef Plotter < GenericProcessor
     end
 
 	properties (Access = private)
-		loop_count;
+		numChannels;
 	end
 
     methods 
@@ -26,7 +26,9 @@ classdef Plotter < GenericProcessor
             self = self@GenericProcessor(host, port);
             
             self.xAxisRange = [0,80000];
-            self.yAxisRange = [-1000 1000];
+            self.yAxisRange = [-2000,2000];
+
+			self.numChannels = 16;
             
             plotTitle = 'Open Ephys Data Stream';
             xLabel = 'Sample Count';
@@ -41,7 +43,6 @@ classdef Plotter < GenericProcessor
 			xlabel(xLabel); ylabel(yLabel);
 			xlim(self.xAxisRange); ylim(self.yAxisRange);
 
-			self.loop_count = 0;
 			self.process();
 
 		end
@@ -51,47 +52,67 @@ classdef Plotter < GenericProcessor
 	methods (Access = protected)
 
 		function process(self)
-            
-			lastSample = 0;
-            xAxisSize = self.xAxisRange(2);
-            
-			while 1
+			xAxisSize = self.xAxisRange(2);
+			plotUpdateInterval = 256; % Update plot every 256 iterations to reduce updates
+			yOffsetIncrement = 200;  % Y offset increment
+			baseYOffset = -1600;  % Base Y offset
 
+			% Initialize xData and yData to maintain plot data continuity
+			xData = 1:xAxisSize;
+			yData = zeros(self.numChannels, xAxisSize);
+
+			% Initialize the plots
+			hold on;
+			hPlots = gobjects(self.numChannels, 1);
+			for i = 1:self.numChannels
+				hPlots(i) = plot(xData, yData(i, :), 'DisplayName', sprintf('Function %d', i));
+			end
+			hold off;
+			axis([1 xAxisSize baseYOffset baseYOffset + self.numChannels * yOffsetIncrement]);
+			drawnow;
+
+			numSamples = 0; % Default number of samples per fetch (should be updated below)
+			startIdx = 1;
+			iterationCounter = 0; % Counter for managing plot updates
+
+			while true
 				process@GenericProcessor(self); 
+				numSamples = self.dataIn.numSamplesFetched; % update numSamples with actual fetched sample size
+				currentRow = mod(iterationCounter, self.numChannels) + 1; % Determine the current row for plotting
 
-				numSamples = self.dataIn.numSamplesFetched;
-                
-				%fprintf('Num samples fetched: %d\n', numSamples);
-
-				if lastSample + numSamples > xAxisSize
-					xData = (lastSample+1):xAxisSize;
-					yData = self.dataIn.continuous(1:(xAxisSize-lastSample)) + mod(self.loop_count, 2)*1000;
-				else
-					xData = (lastSample+1):(lastSample+numSamples);
-					yData = self.dataIn.continuous + mod(self.loop_count, 2)*1000;
+				% Calculate new indices, ensuring they wrap around correctly
+				endIdx = startIdx + numSamples - 1;
+				if endIdx > xAxisSize
+					endIdx = xAxisSize;
 				end
 
-				self.hPlot = plot(xData,yData); drawnow;
-				set(self.hPlot, 'XData', xData, 'YData', yData); 
+				% Update the data for the current row
+				yData(currentRow, startIdx:endIdx) = self.dataIn.continuous(1:(endIdx - startIdx + 1)) + (currentRow - 1) * yOffsetIncrement + baseYOffset;
 
-				self.loop_count = self.loop_count + 1;
+				if mod(iterationCounter + 1, self.numChannels) == 0
+					startIdx = endIdx + 1; % Update startIdx after 16 iterations
+					if startIdx > xAxisSize
+						startIdx = 1; % Wrap around the index
+					end
+				end
 
-				lastSample = lastSample + mod(self.loop_count, 2)*numSamples;
+				% Increment iteration counter
+				iterationCounter = iterationCounter + 1;
 
-				%TODO: Currently ignores (doesn't plot) samples that overshoot x-axis range
-                if lastSample > xAxisSize
-                    lastSample = 0;
-                    cla; self.hPlot = plot(0,0); drawnow; 
-                end
+				% Update the plot less frequently
+				if mod(iterationCounter, plotUpdateInterval) == 0
+					for i = 1:self.numChannels
+						set(hPlots(i), 'YData', yData(i, :));
+					end
+					drawnow limitrate; % Optimize drawing frequency
+				end
 
-                if get(self.fig, 'CurrentCharacter') == 'q'
-                    break;
-                end
-
-            end
-
+				% Break condition on 'q' press
+				if get(self.fig, 'CurrentCharacter') == 'q'
+					break;
+				end
+			end
 		end
-
 	end
 
 end
