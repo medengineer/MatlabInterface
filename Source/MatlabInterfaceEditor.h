@@ -27,38 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <EditorHeaders.h>
 #include "MatlabInterface.h"
 
-#define UI_TIMER_PERIOD 2000 //Update the UI every UI_TIMER_PERIOD ms
-
 class MatlabInterface;
-
-class ConnectionViewer : 
-	public Thread,
-	public Component, 
-	public Button::Listener
-{
-public:
-
-	/** Constructor */
-	ConnectionViewer(MatlabInterface* parentNode);
-
-	/** Destructor */
-	~ConnectionViewer();
-
-	/** Respond to button clicks*/
-	void buttonClicked(Button*) override;
-
-	int buttonSize;
-	int width;
-	int height;
-
-	bool isConnected;
-
-private:
-	MatlabInterface* interface;
-
-	/** Run connection thread*/
-	void run() override;
-};
 
 class MatlabInterfaceEditor : public GenericEditor,
 	public Button::Listener
@@ -76,11 +45,7 @@ public:
 
 private:
 
-	int count;
-
 	MatlabInterface* interface;
-
-	ScopedPointer<ConnectionViewer> viewer;
 
 	std::unique_ptr<UtilityButton> connectButton;
 

@@ -25,42 +25,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "MatlabInterfaceEditor.h"
 #include "MatlabInterface.h"
 
-ConnectionViewer::ConnectionViewer(MatlabInterface* parentNode) : 
-	Component(), Thread("ConnectionViewer"),
-	interface(parentNode) 
-{
-
-	width = 100;
-	height = 200;
-	buttonSize = 50;
-
-	setSize(width, height);
-	setColour(ColourSelector::backgroundColourId, Colours::transparentBlack);
-
-	isConnected = interface->connect();
-
-};
-
-ConnectionViewer::~ConnectionViewer() 
-{
-
-};
-
-void ConnectionViewer::buttonClicked(Button* button) {};
-
-void ConnectionViewer::run()
-{
-
-	LOGC("Waiting for connection...");
-	
-
-}
-
 MatlabInterfaceEditor::MatlabInterfaceEditor(MatlabInterface* parentNode)
 	: GenericEditor(parentNode)
 
 {
-
 	interface = parentNode;
 
 	desiredWidth = 230;
@@ -76,8 +44,6 @@ MatlabInterfaceEditor::MatlabInterfaceEditor(MatlabInterface* parentNode)
 	addAndMakeVisible(connectButton.get());
 
 	addSelectedChannelsParameterEditor(Parameter::STREAM_SCOPE, "channel", 15, 104);
-
-	count = 0;
 }
 
 MatlabInterfaceEditor::~MatlabInterfaceEditor()
@@ -85,18 +51,8 @@ MatlabInterfaceEditor::~MatlabInterfaceEditor()
 
 }
 
-
 void MatlabInterfaceEditor::buttonClicked(Button* button)
 {
-	
-	viewer = new ConnectionViewer(interface);
-
-	if (viewer->isConnected)
-	{
-		connectButton->setEnabled(false);
-	}
-
-	CoreServices::updateSignalChain(this);
+	if (interface->connect())
+		CoreServices::updateSignalChain(this);
 }
-
-
