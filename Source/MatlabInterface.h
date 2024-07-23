@@ -28,7 +28,7 @@
 #define CHANNELS_PER_THREAD		384
 
 
-class MatlabInterface : public GenericProcessor
+class MatlabInterface : public GenericProcessor, public Timer, public Thread
 {
 public:
 
@@ -60,6 +60,12 @@ public:
     void parameterValueChanged(Parameter* param) override;
 
 	std::unique_ptr<SocketThread> socketThread;
+
+	/** Timer callback */
+	void timerCallback() override;
+
+	/** Thread run method */
+	void run() override;
 
 private:
 

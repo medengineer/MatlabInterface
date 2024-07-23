@@ -1,7 +1,7 @@
 #include "MatlabInterface.h"
 
 MatlabInterface::MatlabInterface() 
-	: GenericProcessor("Matlab Interface"),
+	: GenericProcessor("Matlab Interface"), Thread("MatlabInterface"),
 	dataQueue(std::make_unique<DataQueue>(WRITE_BLOCK_LENGTH, DATA_BUFFER_NBLOCKS)),
 	socketThread(std::make_unique<SocketThread>()),
 	connected(false),
@@ -13,6 +13,7 @@ MatlabInterface::MatlabInterface()
     addStringParameter(Parameter::PROCESSOR_SCOPE, "port_number", "Port number", "Set port number", "1234", true);
 	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channel", "Channel", "The continuous channel to analyze", 16);
 
+	startTimer(500);
 }
 
 MatlabInterface::~MatlabInterface()
@@ -22,6 +23,21 @@ MatlabInterface::~MatlabInterface()
 
 	socketThread->signalThreadShouldExit();
 	socketThread->waitForThreadToExit(2000);
+}
+
+void MatlabInterface::timerCallback()
+{
+	startThread();
+}
+
+void MatlabInterface::run()
+{
+	if (connect()) {
+		stopTimer();
+		MessageManager::callAsync([this]() {
+			CoreServices::updateSignalChain(this);
+		});
+	}
 }
 
 bool MatlabInterface::connect()
@@ -105,7 +121,6 @@ void MatlabInterface::process(AudioSampleBuffer& buffer)
 	}
 
 }
-
 
 void MatlabInterface::updateSettings()
 {
