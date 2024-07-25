@@ -71,6 +71,8 @@ private:
 
 	bool connected;
 
+	int selectedStreamIdx;
+
 	Array<int> selectedChannels;
 
 	std::unique_ptr<DataQueue> dataQueue;

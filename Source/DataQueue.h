@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef DATAQUEUE_H_INCLUDED
 #define DATAQUEUE_H_INCLUDED
 
-#include <JuceHeader.h>
+#include <ProcessorHeaders.h>
 
 struct CircularBufferIndexes
 {
@@ -39,13 +39,13 @@ class DataQueue
 public:
 	DataQueue(int blockSize, int nBlocks);
 	~DataQueue();
-	void setChannels(int nChans);
+	void setChannels(Array<int> selectedChannels);
 	void resize(int nBlocks);
 	void getTimestampsForBlock(int idx, Array<int64>& timestamps) const;
 
 	//Only the methods after this comment are considered thread-safe.
 	//Caution must be had to avoid calling more than one of the methods above simulatenously
-	void writeChannel(const AudioSampleBuffer& buffer, int channel, int nSamples, int64 timestamp);
+	void writeChannel(const AudioSampleBuffer& buffer, int local_index, int global_index, int nSamples, int64 timestamp);
 	bool startRead(Array<CircularBufferIndexes>& indexes, Array<int64>& timestamps, int nMax);
 	const AudioSampleBuffer& getAudioBufferReference() const;
 	void stopRead();
@@ -59,7 +59,7 @@ private:
 	int lastIdx;
 	int sample_rate;
 
-	std::vector<std::unique_ptr<AbstractFifo>> m_fifos;
+	OwnedArray<AbstractFifo> m_fifos;
 	AudioSampleBuffer m_buffer;
 	Array<int> m_readSamples;
 	OwnedArray<Array<int64>> m_timestamps;

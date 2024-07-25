@@ -29,7 +29,7 @@ int MatlabSocket::listen(int port, String host)
 	
 	if (connection->waitUntilReady(true, 500) < 1)
 	{
-		LOGC("Could not connect.");
+		//LOGC("Could not connect.");
 		connection = nullptr;
 		return -2;
 	}
@@ -76,10 +76,6 @@ int MatlabSocket::writeHeader()
 
 int MatlabSocket::writeData(int channel, const float* buffer, int size, int idx)
 {
-    // Check for channel presence in selectedChannels
-    if (!selectedChannels.contains(channel))
-        return 0;
-
     // Resize buffer if necessary
     if (size > bufferSize)
     {

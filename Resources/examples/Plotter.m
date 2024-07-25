@@ -17,6 +17,7 @@ classdef Plotter < GenericProcessor
 
 	properties (Access = private)
 		numChannels;
+		sampleRate;
 	end
 
     methods 
@@ -29,6 +30,7 @@ classdef Plotter < GenericProcessor
             self.yAxisRange = [-2000,2000];
 
 			self.numChannels = 16;
+			self.sampleRate = 40000;
             
             plotTitle = 'Open Ephys Data Stream';
             xLabel = 'Sample Count';

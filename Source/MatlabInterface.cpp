@@ -5,13 +5,13 @@ MatlabInterface::MatlabInterface()
 	dataQueue(std::make_unique<DataQueue>(WRITE_BLOCK_LENGTH, DATA_BUFFER_NBLOCKS)),
 	socketThread(std::make_unique<SocketThread>()),
 	connected(false),
-	selectedChannels({0,1}) //TODO: Make general
+	selectedStreamIdx(0),
+	selectedChannels({})
 {
-	setProcessorType(Plugin::Processor::FILTER);
-
-	addStringParameter(Parameter::PROCESSOR_SCOPE, "host_address", "Host address", "Set host address", "127.0.0.1", true);
-    addStringParameter(Parameter::PROCESSOR_SCOPE, "port_number", "Port number", "Set port number", "1234", true);
-	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channel", "Channel", "The continuous channel to analyze", 16);
+	addStringParameter(Parameter::PROCESSOR_SCOPE, "host", "Host address", "Set host address", "127.0.0.1", true);
+	addStringParameter(Parameter::PROCESSOR_SCOPE, "port", "Port number", "Set port number", "1234", true);
+	addSelectedStreamParameter(Parameter::PROCESSOR_SCOPE, "stream", "Stream", "Set the stream to stream to Matlab", {}, 0, true);
+	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channels", "Channels", "Set the continuous channels to stream to Matlab", 16, true);
 
 	startTimer(500);
 }
@@ -42,23 +42,27 @@ void MatlabInterface::run()
 
 bool MatlabInterface::connect()
 {
-	String port = getParameter("port_number")->getValue();
-	String host = getParameter("host_address")->getValue();
-
-	LOGC("Connecting to ", port, ":", host);
+	String port = getParameter("port")->getValue();
+	String host = getParameter("host")->getValue();
 
 	if (socketThread->openSocket(port.getIntValue(), host) > 0)
-	{
 		connected = true;
-		LOGC("CONNECTED.");
-	}
 	else
-	{
 		connected = false;
-		LOGC("NOT CONNECTED.");
-	}
 
 	return connected;
+}
+
+void MatlabInterface::parameterValueChanged(Parameter* param)
+{
+	if (param->getName() == "stream")
+	{
+		selectedStreamIdx = param->getValue();
+		Array<int> channels;
+		for (auto channel : getDataStreams()[selectedStreamIdx]->getContinuousChannels())
+			channels.add(channel->getGlobalIndex());
+		setSelectedChannels(channels);
+	}
 }
 
 void MatlabInterface::setSelectedChannels(Array<int> channels)
@@ -73,51 +77,40 @@ AudioProcessorEditor* MatlabInterface::createEditor()
     return editor.get();
 }
 
-void MatlabInterface::parameterValueChanged(Parameter* param)
-{
-	if (param->getName().equalsIgnoreCase("channel"))
-	{
-		Array<var>* array = param->getValue().getArray();
-
-		if (array->size() > 0)
-		{
-			Array<int> global_channels;
-			for (int i = 0; i < array->size(); i++)
-			{
-				int localIndex = int(array->getReference(i));
-				int globalIndex = getDataStream(param->getStreamId())->getContinuousChannels()[localIndex]->getGlobalIndex();
-				global_channels.add(globalIndex);
-			}
-			setSelectedChannels(global_channels);
-		}
-	}
-}
-
 void MatlabInterface::process(AudioSampleBuffer& buffer)
 {
-
 	if (!connected)
 		return;
 
-	const int nChannels = buffer.getNumChannels();
+	const int nChannels = selectedChannels.size();
 
 	if (!socketThread->isThreadRunning())
 	{
-		dataQueue->setChannels(nChannels);
+		dataQueue->setChannels(selectedChannels);
 		socketThread->setQueuePointers(dataQueue.get());
 		socketThread->setFirstBlockFlag(true);
 		socketThread->setSelectedChannels(selectedChannels);
 		socketThread->startThread();
 	}
 
-	for (auto stream : dataStreams)
+	for (int i = 0; i < getDataStreams().size(); i++)
 	{
-		const uint16 streamId = stream->getStreamId();
+		if (i != selectedStreamIdx)
+			continue;
+
+		const uint16 streamId = getDataStreams()[i]->getStreamId();
 		uint32 numSamples = getNumSamplesInBlock(streamId);
 		int64 sampleNumber = getFirstSampleNumberForBlock(streamId);
 
-		for (auto channel : stream->getContinuousChannels())
-			dataQueue->writeChannel(buffer, channel->getGlobalIndex(), numSamples, sampleNumber);
+		const DataStream* stream = getDataStreams()[i];
+
+		int local_index = 0;
+		for (auto global_index : selectedChannels)
+		{
+			dataQueue->writeChannel(buffer, local_index, global_index, numSamples, sampleNumber);
+			local_index++;
+		}
+
 	}
 
 }
@@ -127,5 +120,5 @@ void MatlabInterface::updateSettings()
 	isEnabled = connected;
 
 	for (auto stream : getDataStreams())
-        parameterValueChanged(stream->getParameter("channel"));
+        parameterValueChanged(stream->getParameter("channels"));
 }

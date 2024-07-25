@@ -55,10 +55,6 @@ classdef OEClient < handle
             line = self.buffered_reader.readLine;
             self.total_lines_read = self.total_lines_read + 1;
 
-            if mod(self.total_lines_read, 10) == 0
-                %fprintf("Read %d lines...\n", self.total_lines_read);
-            end
-
         end
 
         function self = write(self, message)

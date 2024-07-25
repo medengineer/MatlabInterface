@@ -49,7 +49,7 @@ void SocketThread::setSelectedChannels(Array<int> channels)
 
 int SocketThread::openSocket(int port, String host)
 {
-	LOGC("Opening socket...");
+	//LOGC("Opening socket...");
 	if (socket->listen(port, host) == 1)
 	{
 		LOGC("Writing header...");
