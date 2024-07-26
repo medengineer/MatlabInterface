@@ -41,6 +41,9 @@ public:
 	/** Create custom editor */
 	AudioProcessorEditor* createEditor() override;
 
+	/** Override stopAcquisition */
+	bool stopAcquisition() override;
+
 	/** Set currently selected channel */
 	void setSelectedChannels(Array<int> channels);
 
@@ -68,6 +71,8 @@ public:
 	void run() override;
 
 private:
+
+	bool startedAcquisition = false;
 
 	bool connected;
 

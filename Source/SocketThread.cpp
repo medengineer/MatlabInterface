@@ -24,13 +24,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "MatlabInterface.h"
 #include "SocketThread.h"
 
+#include <sstream>
+#include <vector>
+#include <algorithm>
 
-SocketThread::SocketThread() :
-Thread("Socket Thread"),
-m_receivedFirstBlock(false),
-m_cleanExit(true)
+SocketThread::SocketThread() : Thread("Socket Thread"),
+								m_receivedFirstBlock(false),
+								m_cleanExit(true)
 {
-	socket = std::make_unique<MatlabSocket>();
 }
 
 SocketThread::~SocketThread()
@@ -44,24 +45,55 @@ void SocketThread::setQueuePointers(DataQueue* data)
 
 void SocketThread::setSelectedChannels(Array<int> channels)
 {
-	socket->selectedChannels = channels;
+	m_channelArray = channels;
 }
 
 int SocketThread::openSocket(int port, String host)
 {
-	//LOGC("Opening socket...");
-	if (socket->listen(port, host) == 1)
+	if (listen(port, host) == 1)
 	{
-		LOGC("Writing header...");
-		socket->writeHeader();
-
+		writeHeader();
 		return 1;
 	}
-	else {
+	else 
+	{
 		return 0;
 	}
-	
-	
+}
+
+int SocketThread::listen(int port, String host)
+{
+    LOGC("Creating listener...");
+    auto listenerSocket = std::make_unique<StreamingSocket>();
+    if (!listenerSocket->createListener(port, host.isEmpty() ? "127.0.0.1" : host))
+    {
+        LOGC("Failed to create listener!");
+        return -2;
+    }
+
+    while (true)
+    {
+        LOGD("Waiting for next connection...");
+        socket.reset(std::move(listenerSocket->waitForNextConnection()));
+
+        if (socket != nullptr && socket->isConnected())
+        {
+            LOGD("Connection established!");
+			return 1;
+        }
+        else
+        {
+            LOGD("Failed to establish connection!");
+            break;
+        }
+    }
+    return -1;
+}
+
+int SocketThread::writeHeader()
+{
+	//TODO: Write header to Matlab to specify the number of channels and the sampling rate
+	return 1;
 }
 
 void SocketThread::setFirstBlockFlag(bool didReceiveFirstBlock)
@@ -74,7 +106,7 @@ void SocketThread::run()
 {
 
 	const AudioSampleBuffer& dataBuffer = m_dataQueue->getAudioBufferReference();
-	bool closeEarly = true;
+	bool closeEarly = false;
 	//1-Wait until the first block has arrived, so we can align the timestamps
 	while (!m_receivedFirstBlock && !threadShouldExit())
 	{
@@ -91,7 +123,7 @@ void SocketThread::run()
 	//4-Before closing the thread, try to write the remaining samples
 	if (!closeEarly)
 	{
-		writeData(dataBuffer, -1, -1, -1, true);
+		writeData(dataBuffer, BLOCK_MAX_WRITE_SAMPLES, BLOCK_MAX_WRITE_EVENTS, BLOCK_MAX_WRITE_SPIKES, true);
 	}
 	m_cleanExit = true;
 	m_receivedFirstBlock = false;
@@ -110,14 +142,50 @@ void SocketThread::writeData(const AudioSampleBuffer& dataBuffer, int maxSamples
 	{
 		if (idx[chan].size1 > 0)
 		{
-			socket->writeData(chan, dataBuffer.getReadPointer(chan, idx[chan].index1), idx[chan].size1, 1);
+			writeSocket(chan, dataBuffer.getReadPointer(chan, idx[chan].index1), idx[chan].size1, 1);
 			if (idx[chan].size2 > 0)
 			{
 				timestamps.set(chan, timestamps[chan] + idx[chan].size1);
-				socket->writeData(chan, dataBuffer.getReadPointer(chan, idx[chan].index2), idx[chan].size2, 2);
+				writeSocket(chan, dataBuffer.getReadPointer(chan, idx[chan].index2), idx[chan].size2, 2);
 			}
 		}
 	}
 	m_dataQueue->stopRead();
 
+}
+
+int SocketThread::writeSocket(int channel, const float* buffer, int size, int idx)
+{
+    // Resize buffer if necessary
+    if (size > bufferSize)
+    {
+        LOGD("Write buffer overrun, resizing from: ", bufferSize, " to: ", size);
+        bufferSize = size;
+    }
+
+    // Prepare the data in a single string using a string stream for efficiency
+    std::ostringstream oss;
+    std::copy(buffer, buffer + size, std::ostream_iterator<float>(oss, " "));
+
+    // Write the whole line at once, reducing the number of socket calls
+    std::string dataLine = oss.str() + "\n";
+    int bytesWritten = socket->write(dataLine.c_str(), dataLine.size());
+    if (bytesWritten < 0)
+    {
+        // Handle error
+        std::cerr << "Failed to write data to socket" << std::endl;
+        return -1; // or throw an exception
+    }
+
+    // Optionally, read response from server if necessary
+    bool blockUntilSpecifiedAmountHasArrived = false;
+    int bytesRead = socket->read(readBuffer, READ_BUFFER_SIZE, blockUntilSpecifiedAmountHasArrived);
+    if (bytesRead < 0)
+    {
+        // Handle error
+        std::cerr << "Failed to read data from socket" << std::endl;
+        return -1; // or throw an exception
+    }
+
+    return 1; // Success
 }

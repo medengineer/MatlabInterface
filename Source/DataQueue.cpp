@@ -42,7 +42,8 @@ void DataQueue::setChannels(Array<int> selectedChannels)
 	if (m_readInProgress)
 		return;
 
-	m_fifos.clear();
+	LOGC("m_fifos size: ", m_fifos.size());
+	//m_fifos.clear();
 	m_readSamples.clear();
 	m_numChans = selectedChannels.size();
 	m_timestamps.clear();

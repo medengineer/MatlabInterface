@@ -18,11 +18,14 @@ MatlabInterface::MatlabInterface()
 
 MatlabInterface::~MatlabInterface()
 {
-	if (!connected && socketThread->socket->connection != nullptr)
-		socketThread->socket->connection->close();
+	if (socketThread->socket->isConnected())
+		socketThread->socket->close();
 
-	socketThread->signalThreadShouldExit();
-	socketThread->waitForThreadToExit(2000);
+	if (socketThread->isThreadRunning())
+	{
+		socketThread->signalThreadShouldExit();
+		//socketThread->waitForThreadToExit(10000);
+	}
 }
 
 void MatlabInterface::timerCallback()
@@ -38,6 +41,15 @@ void MatlabInterface::run()
 			CoreServices::updateSignalChain(this);
 		});
 	}
+}
+
+bool MatlabInterface::stopAcquisition()
+{
+    if (socketThread->isThreadRunning())
+    {
+        socketThread->signalThreadShouldExit();
+    }
+	startedAcquisition = false;
 }
 
 bool MatlabInterface::connect()
@@ -84,13 +96,15 @@ void MatlabInterface::process(AudioSampleBuffer& buffer)
 
 	const int nChannels = selectedChannels.size();
 
-	if (!socketThread->isThreadRunning())
+	if (!startedAcquisition)
 	{
 		dataQueue->setChannels(selectedChannels);
 		socketThread->setQueuePointers(dataQueue.get());
 		socketThread->setFirstBlockFlag(true);
 		socketThread->setSelectedChannels(selectedChannels);
 		socketThread->startThread();
+
+		startedAcquisition = true;
 	}
 
 	for (int i = 0; i < getDataStreams().size(); i++)
@@ -110,7 +124,6 @@ void MatlabInterface::process(AudioSampleBuffer& buffer)
 			dataQueue->writeChannel(buffer, local_index, global_index, numSamples, sampleNumber);
 			local_index++;
 		}
-
 	}
 
 }

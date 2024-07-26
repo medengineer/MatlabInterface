@@ -25,7 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SOCKETTHREAD_H_INCLUDED
 
 //#include "EventQueue.h"
-#include "MatlabSocket.h"
 #include "DataQueue.h"
 #include <atomic>
 
@@ -33,7 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define BLOCK_MAX_WRITE_EVENTS 32
 #define BLOCK_MAX_WRITE_SPIKES 32
 
-class MatlabSocket;
+#define WRITE_BUFFER_SIZE 40960
+#define READ_BUFFER_SIZE 1024
 
 class SocketThread : public Thread
 {
@@ -48,18 +48,21 @@ public:
 	void setQueuePointers(DataQueue* data);
 	void setSelectedChannels(Array<int> channels);
 
-	int openSocket(int port, String host); 
+	int openSocket(int port, String host);
+	int listen(int port, String host);
+
+	int writeHeader();
 
 	void run() override;
 
 	void setFirstBlockFlag(bool state);
-	void forceCloseFiles();
 
-	std::unique_ptr<MatlabSocket> socket;
+	std::unique_ptr<StreamingSocket> socket;
 
 private:
-	void writeHeader();
 	void writeData(const AudioSampleBuffer& buffer, int maxSamples, int maxEvents, int maxSpikes, bool lastBlock = false);
+
+	int writeSocket(int channel, const float* buffer, int size, int idx);
 
 	Array<int> m_channelArray;
 
@@ -72,6 +75,13 @@ private:
 	int m_experimentNumber;
 	int m_recordingNumber;
 	int m_numChannels;
+
+	bool sentHeader;
+	int bufferSize;
+	int port;
+	bool connected; //true if client (Matlab) has connected
+	char writeBuffer[WRITE_BUFFER_SIZE];
+	char readBuffer[READ_BUFFER_SIZE];
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SocketThread);
 };
