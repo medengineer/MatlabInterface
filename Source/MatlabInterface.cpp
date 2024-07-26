@@ -1,45 +1,44 @@
 #include "MatlabInterface.h"
 
+MatlabInterface::ConnectionThread::ConnectionThread(MatlabInterface* parent)
+	: Thread("Connection Thread"),
+	matlabInterface(parent)
+{
+}
+
+MatlabInterface::ConnectionThread::~ConnectionThread()
+{
+	if (isThreadRunning())
+	{
+		stopThread(-1);
+	}
+}
+
 MatlabInterface::MatlabInterface() 
-	: GenericProcessor("Matlab Interface"), Thread("MatlabInterface"),
-	dataQueue(std::make_unique<DataQueue>(WRITE_BLOCK_LENGTH, DATA_BUFFER_NBLOCKS)),
-	socketThread(std::make_unique<SocketThread>()),
-	connected(false),
-	selectedStreamIdx(0),
-	selectedChannels({})
+	: GenericProcessor("Matlab Interface"),
+		dataQueue(std::make_unique<DataQueue>(WRITE_BLOCK_LENGTH, DATA_BUFFER_NBLOCKS)),
+		socketThread(std::make_unique<SocketThread>()),
+		connected(false),
+		selectedStreamIdx(0),
+		selectedChannels({})
 {
 	addStringParameter(Parameter::PROCESSOR_SCOPE, "host", "Host address", "Set host address", "127.0.0.1", true);
 	addStringParameter(Parameter::PROCESSOR_SCOPE, "port", "Port number", "Set port number", "1234", true);
 	addSelectedStreamParameter(Parameter::PROCESSOR_SCOPE, "stream", "Stream", "Set the stream to stream to Matlab", {}, 0, true);
 	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channels", "Channels", "Set the continuous channels to stream to Matlab", 16, true);
 
-	startTimer(500);
+	connectionThread = std::make_unique<MatlabInterface::ConnectionThread>(this);
+
+	connectionThread->startThread();
 }
 
 MatlabInterface::~MatlabInterface()
 {
-	if (socketThread->socket->isConnected())
-		socketThread->socket->close();
-
-	if (socketThread->isThreadRunning())
+	if (connectionThread->isThreadRunning())
 	{
-		socketThread->signalThreadShouldExit();
-		//socketThread->waitForThreadToExit(10000);
-	}
-}
-
-void MatlabInterface::timerCallback()
-{
-	startThread();
-}
-
-void MatlabInterface::run()
-{
-	if (connect()) {
-		stopTimer();
-		MessageManager::callAsync([this]() {
-			CoreServices::updateSignalChain(this);
-		});
+		connectionThread->signalThreadShouldExit();
+		connectionThread->waitForThreadToExit(1000);
+		connectionThread.reset();
 	}
 }
 

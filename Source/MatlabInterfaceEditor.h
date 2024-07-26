@@ -29,8 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class MatlabInterface;
 
-class MatlabInterfaceEditor : public GenericEditor,
-	public Button::Listener
+class MatlabInterfaceEditor : public GenericEditor
 {
 public:
 
@@ -38,19 +37,11 @@ public:
 	MatlabInterfaceEditor(MatlabInterface* parentNode);
 
 	/** Destructor */
-	virtual ~MatlabInterfaceEditor();
-
-	/** Responds to "connect" button */
-	void buttonClicked(Button* button);
+	~MatlabInterfaceEditor() {};
 
 private:
 
-	MatlabInterface* interface;
-
-	std::unique_ptr<UtilityButton> connectButton;
-
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MatlabInterfaceEditor);
-
 };
 
 #endif  // __MATLAB_ENGINE_EDITOR_H__

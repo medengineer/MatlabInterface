@@ -29,8 +29,6 @@ MatlabInterfaceEditor::MatlabInterfaceEditor(MatlabInterface* parentNode)
 	: GenericEditor(parentNode)
 
 {
-	interface = parentNode;
-
 	desiredWidth = 250;
 
 	addTextBoxParameterEditor(Parameter::PROCESSOR_SCOPE, "host", 15, 29);
@@ -43,15 +41,4 @@ MatlabInterfaceEditor::MatlabInterfaceEditor(MatlabInterface* parentNode)
         auto* ed = getParameterEditor (p);
         ed->setBounds (ed->getX(), ed->getY(), desiredWidth, ed->getHeight());
     }
-}
-
-MatlabInterfaceEditor::~MatlabInterfaceEditor()
-{
-
-}
-
-void MatlabInterfaceEditor::buttonClicked(Button* button)
-{
-	if (interface->connect())
-		CoreServices::updateSignalChain(this);
 }

@@ -43,7 +43,7 @@ public:
 	SocketThread();
 
 	/** Destructor */
-	~SocketThread();
+	virtual ~SocketThread();
 
 	void setQueuePointers(DataQueue* data);
 	void setSelectedChannels(Array<int> channels);
@@ -60,6 +60,7 @@ public:
 	std::unique_ptr<StreamingSocket> socket;
 
 private:
+
 	void writeData(const AudioSampleBuffer& buffer, int maxSamples, int maxEvents, int maxSpikes, bool lastBlock = false);
 
 	int writeSocket(int channel, const float* buffer, int size, int idx);

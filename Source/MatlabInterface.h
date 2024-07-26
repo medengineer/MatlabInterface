@@ -27,8 +27,7 @@
 #define MAX_BUFFER_SIZE			40960
 #define CHANNELS_PER_THREAD		384
 
-
-class MatlabInterface : public GenericProcessor, public Timer, public Thread
+class MatlabInterface : public GenericProcessor
 {
 public:
 
@@ -64,13 +63,28 @@ public:
 
 	std::unique_ptr<SocketThread> socketThread;
 
-	/** Timer callback */
-	void timerCallback() override;
-
-	/** Thread run method */
-	void run() override;
-
 private:
+
+	class ConnectionThread : public Thread
+	{
+	public:
+		ConnectionThread(MatlabInterface* matlabInterface);
+		~ConnectionThread();
+
+		void run() override 
+		{
+			if (matlabInterface->connect()) {
+				MessageManager::callAsync([this]() {
+					CoreServices::updateSignalChain(matlabInterface);
+				});
+			}
+		}
+
+	private:
+		MatlabInterface* matlabInterface;
+	};
+
+	std::unique_ptr<MatlabInterface::ConnectionThread> connectionThread;
 
 	bool startedAcquisition = false;
 
