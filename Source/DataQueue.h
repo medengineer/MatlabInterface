@@ -38,7 +38,7 @@ class DataQueue
 {
 public:
 	DataQueue(int blockSize, int nBlocks);
-	~DataQueue();
+	virtual ~DataQueue();
 	void setChannels(Array<int> selectedChannels);
 	void resize(int nBlocks);
 	void getTimestampsForBlock(int idx, Array<int64>& timestamps) const;

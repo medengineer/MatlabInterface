@@ -128,6 +128,8 @@ void SocketThread::run()
 	m_cleanExit = true;
 	m_receivedFirstBlock = false;
 
+	LOGC("***** Socket thread finished");
+
 }
 
 void SocketThread::writeData(const AudioSampleBuffer& dataBuffer, int maxSamples, int maxEvents, int maxSpikes, bool lastBlock)

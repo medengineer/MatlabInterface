@@ -17,7 +17,7 @@ MatlabInterface::ConnectionThread::~ConnectionThread()
 MatlabInterface::MatlabInterface() 
 	: GenericProcessor("Matlab Interface"),
 		dataQueue(std::make_unique<DataQueue>(WRITE_BLOCK_LENGTH, DATA_BUFFER_NBLOCKS)),
-		socketThread(std::make_unique<SocketThread>()),
+		//socketThread(std::make_unique<SocketThread>()),
 		connected(false),
 		selectedStreamIdx(0),
 		selectedChannels({})
@@ -27,14 +27,14 @@ MatlabInterface::MatlabInterface()
 	addSelectedStreamParameter(Parameter::PROCESSOR_SCOPE, "stream", "Stream", "Set the stream to stream to Matlab", {}, 0, true);
 	addSelectedChannelsParameter(Parameter::STREAM_SCOPE, "channels", "Channels", "Set the continuous channels to stream to Matlab", 16, true);
 
-	connectionThread = std::make_unique<MatlabInterface::ConnectionThread>(this);
+	//connectionThread = std::make_unique<MatlabInterface::ConnectionThread>(this);
 
-	connectionThread->startThread();
+	//connectionThread->startThread();
 }
 
 MatlabInterface::~MatlabInterface()
 {
-	if (connectionThread->isThreadRunning())
+	if (connectionThread && connectionThread->isThreadRunning())
 	{
 		connectionThread->signalThreadShouldExit();
 		connectionThread->waitForThreadToExit(1000);
@@ -44,7 +44,7 @@ MatlabInterface::~MatlabInterface()
 
 bool MatlabInterface::stopAcquisition()
 {
-    if (socketThread->isThreadRunning())
+    if (socketThread && socketThread->isThreadRunning())
     {
         socketThread->signalThreadShouldExit();
     }
@@ -79,7 +79,7 @@ void MatlabInterface::parameterValueChanged(Parameter* param)
 void MatlabInterface::setSelectedChannels(Array<int> channels)
 {
 	selectedChannels = channels;
-	socketThread->setSelectedChannels(selectedChannels);
+	//socketThread->setSelectedChannels(selectedChannels);
 }
 
 AudioProcessorEditor* MatlabInterface::createEditor()
@@ -90,7 +90,7 @@ AudioProcessorEditor* MatlabInterface::createEditor()
 
 void MatlabInterface::process(AudioSampleBuffer& buffer)
 {
-	if (!connected)
+	if (true) //(!connected)
 		return;
 
 	const int nChannels = selectedChannels.size();
@@ -101,7 +101,7 @@ void MatlabInterface::process(AudioSampleBuffer& buffer)
 		socketThread->setQueuePointers(dataQueue.get());
 		socketThread->setFirstBlockFlag(true);
 		socketThread->setSelectedChannels(selectedChannels);
-		socketThread->startThread();
+		//socketThread->startThread();
 
 		startedAcquisition = true;
 	}
@@ -129,6 +129,7 @@ void MatlabInterface::process(AudioSampleBuffer& buffer)
 
 void MatlabInterface::updateSettings()
 {
+	connected = true;
 	isEnabled = connected;
 
 	for (auto stream : getDataStreams())
